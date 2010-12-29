@@ -38,6 +38,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -46,24 +47,30 @@ import android.os.IBinder;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.text.ClipboardManager;
+import android.text.Editable;
+import android.text.Spannable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
-import android.view.WindowManager;
-import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewConfiguration;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.inputmethod.BaseInputConnection;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -73,7 +80,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
-import android.widget.AdapterView.OnItemClickListener;
 
 import com.nullwire.trace.ExceptionHandler;
 
@@ -386,6 +392,96 @@ public class ConsoleActivity extends Activity {
 			}
 		});
 
+		// IME button (no direct input)
+		final ImageView imeButton = (ImageView) findViewById(R.id.button_ime);
+		imeButton.setOnClickListener(new OnClickListener() {
+			public void onClick(View view) {
+				View flip = findCurrentView(R.id.console_flip);
+				if (flip == null)
+					return;
+				// TerminalView terminal = (TerminalView)flip;
+				TextView imeInput = (TextView) findViewById(R.id.ime_input);
+
+				imeInput.setText("");
+				imeInput.setVisibility(View.VISIBLE);
+				imeInput.setImeOptions(EditorInfo.IME_FLAG_NO_ENTER_ACTION);
+				imeInput.setBackgroundColor(Color.argb(127, 0, 0, 200));
+				RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) flip.getLayoutParams();
+				lp.setMargins(0, 0, 0, 30);
+				flip.setLayoutParams(lp);
+
+				imeInput.setOnKeyListener(new OnKeyListener() {
+					public boolean onKey(View v, int keyCode, KeyEvent event) {
+						if (event.getAction() == KeyEvent.ACTION_UP)
+							return false;
+
+						View flip = findCurrentView(R.id.console_flip);
+						if (flip == null)
+							return false;
+
+						TerminalView terminal = (TerminalView) flip;
+						TextView imeInput = (TextView) findViewById(R.id.ime_input);
+
+						if (keyCode == KeyEvent.KEYCODE_ENTER) {
+							if (imeInput.getText().length() > 0) {
+								// terminal.bridge.injectString(imeInput.getText().toString());
+								// imeInput.setText("");
+							} else {
+								terminal.bridge.injectString("\n");
+							}
+							return false;
+						}
+
+						if (keyCode == KeyEvent.KEYCODE_DEL && imeInput.getText().length() == 0) {
+							terminal.bridge.injectString("\b");
+							return true;
+						}
+
+						return false;
+					}
+				});
+
+				imeInput.requestFocus();
+				inputManager.showSoftInput(flip, InputMethodManager.SHOW_FORCED);
+				// TerminalKeyListener handler =
+				// terminal.bridge.getKeyHandler();
+				// handler.sendEscape();
+
+				keyboardGroup.setVisibility(View.GONE);
+			}
+		});
+
+		// IME conversion area...
+		TextView imeInput = (TextView) findViewById(R.id.ime_input);
+		imeInput.addTextChangedListener(new TextWatcher() {
+			public void afterTextChanged(Editable s) {
+				View flip = findCurrentView(R.id.console_flip);
+				if (flip == null)
+					return;
+				if (s.length() == 0)
+					return;
+				TerminalView terminal = (TerminalView) flip;
+				TextView imeInput = (TextView) findViewById(R.id.ime_input);
+
+				int candStart = -1;
+				if (imeInput.getText() instanceof Spannable) {
+					Spannable sp = (Spannable) imeInput.getText();
+					candStart = BaseInputConnection.getComposingSpanStart(sp);
+				}
+				if (candStart == -1) {
+					terminal.bridge.injectString(s.toString());
+					imeInput.setText("");
+				}
+			}
+
+			public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+			}
+
+			public void onTextChanged(CharSequence s, int start, int before, int count) {
+			}
+		});
+
 		// detect fling gestures to switch between terminals
 		final GestureDetector detect = new GestureDetector(new GestureDetector.SimpleOnGestureListener() {
 			private float totalY = 0;
@@ -552,6 +648,7 @@ public class ConsoleActivity extends Activity {
 						&& Math.abs(event.getY() - lastY) < MAX_CLICK_DISTANCE) {
 					keyboardGroup.startAnimation(keyboard_fade_in);
 					keyboardGroup.setVisibility(View.VISIBLE);
+					((TextView) findViewById(R.id.ime_input)).setVisibility(View.GONE);
 
 					handler.postDelayed(new Runnable() {
 						public void run() {
