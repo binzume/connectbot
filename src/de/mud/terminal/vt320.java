@@ -25,9 +25,9 @@
 
 package de.mud.terminal;
 
-import android.text.AndroidCharacter;
-
 import java.util.Properties;
+
+import android.text.AndroidCharacter;
 
 /**
  * Implementation of a VT terminal emulation plus ANSI compatible.
@@ -222,8 +222,8 @@ public void setScreenSize(int c, int r, boolean broadcast) {
     Insert[0] = Insert[1] = Insert[2] = Insert[3] = "\u001b[2~";
     Remove[0] = Remove[1] = Remove[2] = Remove[3] = "\u001b[3~";
     PrevScn[0] = PrevScn[1] = PrevScn[2] = PrevScn[3] = "\u001b[5~";
-    NextScn[0] = NextScn[1] = NextScn[2] = NextScn[3] = "\u001b[6~";
-    KeyHome[0] = KeyHome[1] = KeyHome[2] = KeyHome[3] = "\u001b[H";
+		NextScn[0] = NextScn[1] = NextScn[2] = NextScn[3] = "\u001b[6~";
+		KeyHome[0] = KeyHome[1] = KeyHome[2] = KeyHome[3] = "\u001b[H";
     KeyEnd[0] = KeyEnd[1] = KeyEnd[2] = KeyEnd[3] = "\u001b[F";
     Escape[0] = Escape[1] = Escape[2] = Escape[3] = "\u001b";
     if (vms) {
@@ -288,12 +288,16 @@ public void setScreenSize(int c, int r, boolean broadcast) {
 
     KeyUp = new String[4];
     KeyUp[0] = "\u001b[A";
+		KeyUp[3] = "\u001b\u001b[A";
     KeyDown = new String[4];
     KeyDown[0] = "\u001b[B";
+		KeyDown[3] = "\u001b\u001b[B";
     KeyRight = new String[4];
     KeyRight[0] = "\u001b[C";
+		KeyRight[3] = "\u001b\u001b[C";
     KeyLeft = new String[4];
     KeyLeft[0] = "\u001b[D";
+		KeyLeft[3] = "\u001b\u001b[D";
     Numpad = new String[10];
     Numpad[0] = "\u001bOp";
     Numpad[1] = "\u001bOq";

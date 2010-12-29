@@ -112,7 +112,8 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 			// Ignore all key-up events except for the special keys
 			if (event.getAction() == KeyEvent.ACTION_UP) {
 				// There's nothing here for virtual keyboard users.
-				if (!hardKeyboard || (hardKeyboard && hardKeyboardHidden))
+				// FIXME: hardKeyboard==false, when use additional keyboard...
+				if (!hardKeyboard && event.getScanCode() == 0 || (hardKeyboard && hardKeyboardHidden))
 					return false;
 
 				// skip keys if we aren't connected yet or have been disconnected
@@ -190,6 +191,55 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 			if (mDeadKey != 0) {
 				key = KeyCharacterMap.getDeadChar(mDeadKey, keyCode);
 				mDeadKey = 0;
+			}
+
+			//
+			if (true) {
+				// TODO: add 'Use ScanCode' setting
+				Log.d("key", "code:" + event.getScanCode() + "," + event.getDeviceId() + "," + event.getKeyCode());
+				if (event.isAltPressed()) {
+					metaState |= META_ALT_ON;
+					bridge.redraw();
+				}
+
+				if (event.getScanCode() == 29) {
+					metaState |= META_CTRL_ON;
+					bridge.redraw();
+					return true;
+				}
+
+				if (event.getScanCode() == 1 || event.getScanCode() == 41) {
+					sendEscape();
+					return true;
+				}
+
+				// PageUp/PageDown
+				if (event.getScanCode() == 104) {
+					((vt320) buffer).keyPressed(vt320.KEY_PAGE_UP, ' ', 0);
+					metaState &= ~META_TRANSIENT;
+					bridge.tryKeyVibrate();
+					return true;
+				}
+				if (event.getScanCode() == 109) {
+					((vt320) buffer).keyPressed(vt320.KEY_PAGE_DOWN, ' ', 0);
+					metaState &= ~META_TRANSIENT;
+					bridge.tryKeyVibrate();
+					return true;
+				}
+
+				// for external keyboard (device direction independent)
+				if (event.getScanCode() == 103) {
+					keyCode = KeyEvent.KEYCODE_DPAD_UP;
+				}
+				if (event.getScanCode() == 108) {
+					keyCode = KeyEvent.KEYCODE_DPAD_DOWN;
+				}
+				if (event.getScanCode() == 105) {
+					keyCode = KeyEvent.KEYCODE_DPAD_LEFT;
+				}
+				if (event.getScanCode() == 106) {
+					keyCode = KeyEvent.KEYCODE_DPAD_RIGHT;
+				}
 			}
 
 			final boolean printing = (key != 0);
